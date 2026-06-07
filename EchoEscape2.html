@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECHO ESCAPE 2</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden;font-family:'Courier New',monospace}
+canvas{display:block;cursor:crosshair}
+#ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+#hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.78);padding:6px 14px;border:1px solid #1a4a6a;border-radius:2px;white-space:nowrap}
+.hl{color:#4aaada;font-size:10px;letter-spacing:2px}
+.gw{height:4px;background:#0a1520;border:1px solid #1a3a5a}
+#ngw{width:130px}#nf{height:100%;width:0;background:#2a8aee;transition:background .3s}
+#sgw{width:90px}#sf{height:100%;width:100%;background:#2aee6a}
+#hpBar{display:flex;gap:3px;align-items:center}
+#timerLbl{color:#2a6a9a;font-size:10px;letter-spacing:2px;min-width:42px}
+#inv{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;flex-direction:row;gap:10px}
+.slot{width:54px;height:54px;border:1px solid #2a3a4a;background:rgba(15,15,15,.85);display:flex;align-items:center;justify-content:center;position:relative;font-size:26px;border-radius:3px}
+.slot.active{border-color:rgba(120,200,255,.9);background:rgba(40,70,95,.9);box-shadow:0 0 10px rgba(60,160,240,.4)}
+.slot-num{position:absolute;bottom:2px;right:4px;font-size:10px;color:#6a8aaa}
+.slot-cnt{position:absolute;top:2px;left:4px;font-size:11px;color:#dde;font-weight:bold}
+#objs{position:absolute;top:14px;right:14px;font-size:14px;letter-spacing:1px;line-height:2;color:#5aaadd;background:rgba(0,0,0,.7);padding:12px 18px;border:1px solid #1a4a6a;border-radius:3px}
+#objs .done{color:#4aaa6a;text-decoration:line-through}
+#vig{position:absolute;inset:0;pointer-events:none;opacity:0;box-shadow:inset 0 0 160px 80px rgba(200,20,20,.72);transition:opacity .12s}
+#tut{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:2px;color:#6abaee;text-align:center;line-height:2;background:rgba(0,0,0,.65);padding:6px 18px;border-radius:2px;transition:opacity 1.2s}
+/* START */
+#startScr{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:100}
+#startScr h1{color:#3aaaee;font-size:38px;letter-spacing:14px;font-weight:100;text-shadow:0 0 40px rgba(30,140,220,.6);animation:pulse 3s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
+.tagline{color:#5a9abb;font-size:11px;letter-spacing:2px;text-align:center;line-height:2.4;max-width:360px}
+.ctrl{color:#3a6a8a;font-size:10px;letter-spacing:2px;line-height:2.8;text-align:center;border:1px solid #1a3a5a;padding:10px 20px}
+.ctrl b{color:#5abaee}
+#rankList{font-size:9px;letter-spacing:1px;color:#2a6a8a;line-height:2;text-align:center}
+#startBtn{background:transparent;border:2px solid #2a7aaa;color:#3aaaee;font-family:'Courier New',monospace;font-size:11px;letter-spacing:4px;padding:10px 28px;cursor:pointer;transition:all .25s}
+#startBtn:hover{background:rgba(30,140,220,.15);border-color:#4abaee;color:#6ad4ff}
+.blink{color:#1a5a7a;font-size:10px;letter-spacing:3px;animation:bl 2s step-end infinite}
+@keyframes bl{0%,100%{opacity:.9}50%{opacity:.15}}
+/* STAGE INTRO */
+#stgScr{position:fixed;inset:0;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:150}
+#stgNum{color:#3aaaee;font-size:11px;letter-spacing:8px}
+#stgTitle{color:#eef4ff;font-size:28px;letter-spacing:4px;font-weight:100}
+#stgDesc{color:#3a6a8a;font-size:10px;letter-spacing:2px;line-height:2.4;text-align:center}
+#stgCD{color:#1a6aaa;font-size:42px;font-weight:100;letter-spacing:6px;animation:cdA 1s ease-in-out infinite}
+@keyframes cdA{0%,100%{opacity:.3}50%{opacity:1}}
+/* STAGE CLEAR */
+#scScr{position:fixed;inset:0;background:rgba(0,8,4,.95);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:200}
+#scScr h2{color:#30cc70;font-size:24px;letter-spacing:10px;font-weight:100}
+#scGrade{font-size:50px;font-weight:100}
+#scInfo{font-size:10px;letter-spacing:2px;color:#307a50;line-height:2.8;text-align:center}
+#nextBtn{background:transparent;border:1px solid #307a50;color:#30cc70;font-family:'Courier New',monospace;font-size:10px;letter-spacing:4px;padding:10px 28px;cursor:pointer;transition:all .25s;pointer-events:all}
+#nextBtn:hover{border-color:#50ee90;color:#60ffaa}
+/* FINAL CLEAR */
+#clrScr{position:fixed;inset:0;background:rgba(0,0,10,.93);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:200}
+#clrScr h2{color:#cccc30;font-size:26px;letter-spacing:12px;font-weight:100}
+#clrGrade{font-size:52px;font-weight:100}
+#clrStats{font-size:10px;letter-spacing:2px;color:#7a8a30;line-height:2.8;text-align:center}
+#replayBtn{background:transparent;border:1px solid #6a7a20;color:#aaaa40;font-family:'Courier New',monospace;font-size:10px;letter-spacing:4px;padding:10px 28px;cursor:pointer;pointer-events:all}
+/* GAME OVER */
+#goScr{position:fixed;inset:0;background:rgba(30,0,0,.96);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:200;animation:goFade .6s ease}
+@keyframes goFade{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:scale(1)}}
+#goScr h2{color:#ee3030;font-size:28px;letter-spacing:12px;font-weight:100;text-shadow:0 0 40px rgba(220,30,30,.7)}
+#goStats{color:#663333;font-size:10px;letter-spacing:2px;line-height:2.4;border:1px solid #441111;padding:10px 20px;text-align:center}
+#retryBtn{background:transparent;border:1px solid #882222;color:#ee3030;font-family:'Courier New',monospace;font-size:10px;letter-spacing:4px;padding:10px 28px;cursor:pointer;pointer-events:all}
+#retryBtn:hover{border-color:#ee4040;color:#ff5050}
+</style>
+</head>
+<body>
+<div id="startScr">
+  <h1>ECHO ESCAPE</h1>
+  <p class="tagline">소리를 내야 길이 보이지만,<br>소리를 내면 들킨다.<br><br>암흑 속에서 탈출하라.</p>
+  <div class="ctrl">
+    <b>WASD</b> 이동 &nbsp;|&nbsp; <b>Shift</b> 달리기<br>
+    <b>좌클릭</b> 광역 탐지 (벽 차단, 적 위치 3초 노출)<br>
+    <b>Space</b> 아이템 사용 / 돌 던지기 &nbsp;|&nbsp; <b>1·2</b> 슬롯 선택 &nbsp;|&nbsp; 아이템 자동 획득<br>
+    🟠 스카우터: 빠름 &nbsp;|&nbsp; 🟣 와처: 느림·플레이어 발견 시 파동 발사<br><br>
+    🎧 이어폰 착용 권장
+  </div>
+  <div id="rankList"></div>
+  <button id="startBtn">[ START ]</button>
+  <p class="blink">— 소리에 집중하라 —</p>
+</div>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="hud">
+    <span id="stgInd" class="hl">ST.1</span>
+    <span class="hl">NOISE</span>
+    <div class="gw" id="ngw"><div id="nf"></div></div>
+    <span class="hl">DASH</span>
+    <div class="gw" id="sgw"><div id="sf"></div></div>
+    <span class="hl">HP</span>
+    <div id="hpBar"></div>
+    <span id="timerLbl">00:00</span>
+  </div>
+  <div id="inv"></div>
+  <div id="objs">
+    <div id="obj1">[ ] 열쇠 획득</div>
+    <div id="obj2">[ ] 탈출구 탈출</div>
+  </div>
+  <div id="vig"></div>
+  <div id="tut">탈출해라 &nbsp;|&nbsp; 좌클릭: 광역 탐지 &nbsp;|&nbsp; Space: 아이템 / 돌</div>
+</div>
+<div id="stgScr">
+  <p id="stgNum">STAGE 1/3</p>
+  <h2 id="stgTitle"></h2>
+  <p id="stgDesc"></p>
+  <p id="stgCD">3</p>
+</div>
+<div id="scScr"><h2>STAGE CLEAR</h2><div id="scGrade"></div><div id="scInfo"></div><button id="nextBtn">[ NEXT ]</button></div>
+<div id="clrScr"><h2>ESCAPED</h2><div id="clrGrade"></div><div id="clrStats"></div><button id="replayBtn">[ RETRY ]</button></div>
+<div id="goScr"><h2>GAME OVER</h2><div id="goStats"></div><button id="retryBtn">[ RETRY ]</button></div>
+
+<script>
+// ══════════════════════════════════════════════
+// CANVAS
+// ══════════════════════════════════════════════
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+let VW=0,VH=0;
+function resize(){VW=Math.min(window.innerWidth,960);VH=Math.min(window.innerHeight,660);canvas.width=VW;canvas.height=VH;}
+resize();window.addEventListener('resize',resize);
+const fogC=document.createElement('canvas'),fogX=fogC.getContext('2d');
+function resizeFog(){fogC.width=VW;fogC.height=VH;}
+resizeFog();window.addEventListener('resize',resizeFog);
+
+// ══════════════════════════════════════════════
+// AUDIO
+// ══════════════════════════════════════════════
+let ac=null;
+function getAC(){if(!ac)ac=new(window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();return ac;}
+function tone(freq,type,dur,vol,pan,fEnd){
+  try{const a=getAC(),o=a.createOscillator(),g=a.createGain(),p=a.createStereoPanner();
+  o.connect(g);g.connect(p);p.connect(a.destination);
+  o.type=type;o.frequency.setValueAtTime(Math.max(20,freq),a.currentTime);
+  if(fEnd)o.frequency.exponentialRampToValueAtTime(Math.max(20,fEnd),a.currentTime+dur);
+  p.pan.value=Math.max(-1,Math.min(1,pan||0));
+  g.gain.setValueAtTime(vol,a.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur);
+  o.start();o.stop(a.currentTime+dur+0.05);}catch(e){}
+}
+const sfx={
+  pingL:()=>{tone(480,'sine',0.35,0.18,0,200);},
+  pingR:()=>{tone(310,'sine',1.0,0.22,0,55);},
+  walk: ()=>tone(115,'triangle',0.04,0.05,0),
+  run:  ()=>tone(85,'triangle',0.05,0.07,0),
+  pick: ()=>{tone(523,'sine',0.07,0.22,0);setTimeout(()=>tone(784,'sine',0.2,0.22,0),120);},
+  keyU: ()=>{tone(350,'sawtooth',0.1,0.18,0,600);setTimeout(()=>tone(700,'sine',0.28,0.2,0),100);},
+  esc:  ()=>{for(let i=0;i<5;i++)setTimeout(()=>tone(220*Math.pow(2,i/4),'sine',0.5,0.16,0),i*100);},
+  dmg:  ()=>tone(75,'sawtooth',0.6,0.32,0),
+  die:  ()=>{tone(70,'sawtooth',0.8,0.38,0);setTimeout(()=>tone(50,'sawtooth',0.7,0.3,0),380);},
+  alarm:(p)=>tone(660,'square',0.15,0.18,p,440),
+  toy:  (p)=>tone(880,'triangle',0.2,0.15,p,550),
+  stone:(p)=>tone(200,'sawtooth',0.25,0.15,p,80),
+  enemy:(p)=>tone(145,'sine',0.4,0.19,p,55),
+  detect:()=>{tone(200,'sawtooth',0.5,0.28,0);setTimeout(()=>tone(160,'sawtooth',0.4,0.22,0),300);},
+  breath:()=>tone(200,'sine',0.7,0.03,0,150),
+};
+function startDrone(){
+  const a=getAC(),o=a.createOscillator(),g=a.createGain(),f=a.createBiquadFilter();
+  o.connect(f);f.connect(g);g.connect(a.destination);
+  o.type='sawtooth';o.frequency.value=52;f.type='lowpass';f.frequency.value=175;g.gain.value=0.026;
+  o.start();
+  setInterval(()=>{if(!ac)return;o.frequency.linearRampToValueAtTime(44+Math.random()*20,a.currentTime+4);f.frequency.linearRampToValueAtTime(120+Math.random()*100,a.currentTime+4);},4000);
+}
+
+// ══════════════════════════════════════════════
+// STAGE CONFIG
+// ══════════════════════════════════════════════
+const STAGE_CFG={
+  1:{name:'STAGE 1/3',title:'병원 지하층',desc:'기본 메커니즘을 익혀라.',enemies:2,speedBonus:0,visBonus:90,enemySee:240,gradeS:8,gradeA:14,gradeB:22},
+  2:{name:'STAGE 2/3',title:'창고 구역',desc:'적이 늘어났다. 조용히 움직여라.',enemies:3,speedBonus:28,visBonus:0,enemySee:0,gradeS:6,gradeA:12,gradeB:20},
+  3:{name:'STAGE 3/3',title:'제어실',desc:'최악의 상황. 모든 기술을 동원하라.',enemies:4,speedBonus:55,visBonus:0,enemySee:0,gradeS:5,gradeA:10,gradeB:17},
+};
+let curStage=1,totalPings=0,startTime=0,stgStartTime=0;
+
+// ══════════════════════════════════════════════
+// MAP
+// ══════════════════════════════════════════════
+const T=40,WCOLS=56,WROWS=44,WORLD_W=WCOLS*T,WORLD_H=WROWS*T;
+let worldMap;
+// tile: 0=floor 1=wall 2=box
+
+function buildMap(){
+  worldMap=[];
+  for(let r=0;r<WROWS;r++)worldMap.push(new Uint8Array(WCOLS).fill(1));
+  const rooms=[];
+  function split(x,y,w,h,dep){
+    const MIN=8,MAX=18;
+    if(w<MIN*2+3||h<MIN*2+3||dep>5||(dep>2&&Math.random()<0.38)){
+      const rw=MIN+Math.floor(Math.random()*Math.min(w-MIN-2,MAX-MIN+1));
+      const rh=MIN+Math.floor(Math.random()*Math.min(h-MIN-2,MAX-MIN+1));
+      const rx=x+1+Math.floor(Math.random()*(w-rw-1));
+      const ry=y+1+Math.floor(Math.random()*(h-rh-1));
+      for(let r=ry;r<ry+rh;r++)for(let c=rx;c<rx+rw;c++)if(r>0&&r<WROWS-1&&c>0&&c<WCOLS-1)worldMap[r][c]=0;
+      rooms.push({cx:Math.floor(rx+rw/2),cy:Math.floor(ry+rh/2),x:rx,y:ry,w:rw,h:rh});return;
+    }
+    const hz=w>h?false:h>w?true:Math.random()<0.5;
+    if(hz){const sy=y+MIN+Math.floor(Math.random()*(h-MIN*2));split(x,y,w,sy-y,dep+1);split(x,sy,w,h-(sy-y),dep+1);}
+    else{const sx=x+MIN+Math.floor(Math.random()*(w-MIN*2));split(x,y,sx-x,h,dep+1);split(sx,y,w-(sx-x),h,dep+1);}
+  }
+  split(0,0,WCOLS,WROWS,0);
+  function cH(x1,x2,y){const mn=Math.min(x1,x2),mx=Math.max(x1,x2);for(let c=mn;c<=mx;c++)if(y>0&&y<WROWS-1)worldMap[y][c]=0;}
+  function cV(y1,y2,x){const mn=Math.min(y1,y2),mx=Math.max(y1,y2);for(let r=mn;r<=mx;r++)if(x>0&&x<WCOLS-1)worldMap[r][x]=0;}
+  for(let i=1;i<rooms.length;i++){
+    const a=rooms[i-1],b=rooms[i];
+    if(Math.random()<0.5){cH(a.cx,b.cx,a.cy);cV(a.cy,b.cy,b.cx);}
+    else{cV(a.cy,b.cy,a.cx);cH(a.cx,b.cx,b.cy);}
+  }
+  // CA smooth
+  const nx=[];for(let r=0;r<WROWS;r++)nx.push(new Uint8Array(WCOLS));
+  for(let r=1;r<WROWS-1;r++)for(let c=1;c<WCOLS-1;c++){
+    let w=0;for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++)if(worldMap[r+dr][c+dc]===1)w++;
+    nx[r][c]=worldMap[r][c]===0?(w>=7?1:0):(w>=5?1:0);
+  }
+  for(let c=0;c<WCOLS;c++){nx[0][c]=1;nx[WROWS-1][c]=1;}
+  for(let r=0;r<WROWS;r++){nx[r][0]=1;nx[r][WCOLS-1]=1;}
+  worldMap=nx;
+  // Place box obstacles in larger rooms
+  for(const rm of rooms){
+    if(rm.w>=10&&rm.h>=10&&Math.random()<0.55){
+      const bx=rm.x+2+Math.floor(Math.random()*(rm.w-4));
+      const by=rm.y+2+Math.floor(Math.random()*(rm.h-4));
+      const bw=1+Math.floor(Math.random()*2),bh=1+Math.floor(Math.random()*2);
+      for(let r=by;r<by+bh&&r<WROWS-1;r++)for(let c=bx;c<bx+bw&&c<WCOLS-1;c++)if(worldMap[r][c]===0)worldMap[r][c]=2;
+    }
+  }
+  return rooms;
+}
+function isWall(wx,wy){const c=Math.floor(wx/T),r=Math.floor(wy/T);if(r<0||r>=WROWS||c<0||c>=WCOLS)return true;return worldMap[r][c]!==0;}
+function getFloors(){const a=[];for(let r=2;r<WROWS-2;r++)for(let c=2;c<WCOLS-2;c++)if(worldMap[r][c]===0)a.push({x:c*T+T/2,y:r*T+T/2});return a;}
+function safePick(floors,margin){
+  const safe=floors.filter(p=>{
+    for(let dy=-margin;dy<=margin;dy+=margin)for(let dx=-margin;dx<=margin;dx+=margin)if(isWall(p.x+dx,p.y+dy))return false;
+    return true;
+  });
+  const arr=safe.length>0?safe:floors;return arr[Math.floor(Math.random()*arr.length)];
+}
+
+// ══════════════════════════════════════════════
+// WALL SEGS & POLYLINES
+// ══════════════════════════════════════════════
+let wSegs=[],wAlpha=[];
+let wPolys=[];
+function buildWallSegs(){
+  const seen=new Set();wSegs=[];
+  function add(x1,y1,x2,y2){const k=x1<x2||(x1===x2&&y1<y2)?`${x1},${y1},${x2},${y2}`:`${x2},${y2},${x1},${y1}`;if(seen.has(k))return;seen.add(k);wSegs.push({x1,y1,x2,y2});}
+  for(let r=0;r<WROWS;r++)for(let c=0;c<WCOLS;c++){
+    if(worldMap[r][c]===0)continue;
+    const x=c*T,y=r*T;
+    if(r===0||worldMap[r-1][c]===0)add(x,y,x+T,y);
+    if(r===WROWS-1||worldMap[r+1][c]===0)add(x,y+T,x+T,y+T);
+    if(c===0||worldMap[r][c-1]===0)add(x,y,x,y+T);
+    if(c===WCOLS-1||worldMap[r][c+1]===0)add(x+T,y,x+T,y+T);
+  }
+  wAlpha=new Float32Array(wSegs.length).fill(0);
+}
+function buildWallPolys(){
+  wPolys=[];
+  const sm=new Map();
+  for(let i=0;i<wSegs.length;i++){const s=wSegs[i],k=`${s.x1},${s.y1}`;if(!sm.has(k))sm.set(k,[]);sm.get(k).push(i);}
+  const used=new Uint8Array(wSegs.length);
+  for(let i=0;i<wSegs.length;i++){
+    if(used[i])continue;used[i]=1;
+    const first=wSegs[i],horiz=Math.abs(first.y2-first.y1)<0.5;
+    const pts=[{x:first.x1,y:first.y1},{x:first.x2,y:first.y2}],indices=[i];
+    let safe=wSegs.length;
+    while(safe-->0){
+      const last=wSegs[indices[indices.length-1]];
+      if(Math.abs(last.y2-last.y1)<0.5!==horiz)break;
+      const cands=sm.get(`${last.x2},${last.y2}`);if(!cands)break;
+      let found=false;
+      for(const j of cands){if(used[j])continue;const cand=wSegs[j];if((Math.abs(cand.y2-cand.y1)<0.5)!==horiz)continue;if(horiz&&Math.abs(cand.y1-first.y1)>0.5)continue;if(!horiz&&Math.abs(cand.x1-first.x1)>0.5)continue;used[j]=1;indices.push(j);pts.push({x:cand.x2,y:cand.y2});found=true;break;}
+      if(!found)break;
+    }
+    wPolys.push({pts,indices});
+  }
+}
+
+// ══════════════════════════════════════════════
+// CAMERA
+// ══════════════════════════════════════════════
+const cam={x:0,y:0};
+function updCam(px,py){cam.x=Math.max(0,Math.min(WORLD_W-VW,px-VW/2));cam.y=Math.max(0,Math.min(WORLD_H-VH,py-VH/2));}
+const w2sx=wx=>wx-cam.x,w2sy=wy=>wy-cam.y;
+const s2wx=sx=>sx+cam.x,s2wy=sy=>sy+cam.y;
+
+// ══════════════════════════════════════════════
+// RAYCAST
+// ══════════════════════════════════════════════
+const RC=120;
+function castRay(ox,oy,ang,maxD){
+  const dx=Math.cos(ang),dy=Math.sin(ang),step=3;
+  let d=step;while(d<=maxD){if(isWall(ox+dx*d,oy+dy*d))return d;d+=step;}return maxD;
+}
+function buildHits(ox,oy,maxD){
+  const h=new Float32Array(RC);
+  for(let i=0;i<RC;i++)h[i]=castRay(ox,oy,(i/RC)*Math.PI*2,maxD);
+  return h;
+}
+function revealWalls(ox,oy,maxR){
+  const RAYS=RC*2;
+  for(let i=0;i<RAYS;i++){
+    const ang=(i/RAYS)*Math.PI*2,d=castRay(ox,oy,ang,maxR);
+    const hx=ox+Math.cos(ang)*d,hy=oy+Math.sin(ang)*d;
+    for(let j=0;j<wSegs.length;j++){const s=wSegs[j];if(Math.hypot((s.x1+s.x2)/2-hx,(s.y1+s.y2)/2-hy)<T*0.8)wAlpha[j]=1.0;}
+  }
+}
+function revealAllWalls(ox,oy,maxR){
+  for(let j=0;j<wSegs.length;j++){const s=wSegs[j];if(Math.hypot((s.x1+s.x2)/2-ox,(s.y1+s.y2)/2-oy)<=maxR)wAlpha[j]=Math.max(wAlpha[j],1.0);}
+}
+
+// ══════════════════════════════════════════════
+// SONAR RINGS
+// ══════════════════════════════════════════════
+// type: 'ping'=white local, 'scan'=blue full, 'walk'=tiny, 'enemy'=red, 'alarm'=orange, 'exit'=gold, 'stone'=yellow
+let sonarRings=[];
+function spawnSonar(ox,oy,maxR,type,penetrate){
+  const hits=penetrate?null:buildHits(ox,oy,maxR);
+  sonarRings.push({x:ox,y:oy,radius:0.1,maxR,speed:maxR*(penetrate?1.3:1.6),alpha:0.9,type,penetrate,hits});
+  if(!penetrate)revealWalls(ox,oy,maxR);
+  else revealAllWalls(ox,oy,maxR);
+}
+
+// ══════════════════════════════════════════════
+// FOOTPRINTS  PARTICLES
+// ══════════════════════════════════════════════
+let footprints=[],particles=[];
+function spawnParts(wx,wy,r,g,b,n){
+  for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,spd=40+Math.random()*80;particles.push({x:wx,y:wy,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,alpha:1,rad:2+Math.random()*2,r,g,b});}
+}
+
+// ══════════════════════════════════════════════
+// GAME STATE
+// ══════════════════════════════════════════════
+let player,enemies=[],items=[],stones=[];
+let toyItems=[],alarmItems=[];
+let inventory=[],activeSlot=0;
+let hasKey=false,exitOpen=false,exitObj=null;
+let noiseGauge=0,pingCount=0;
+let playerHP=3,hitCD=0,scrFlash=0;
+let dangerLv=0,alertLv=0;
+let gameActive=false,isDead=false;
+// Noise: 게이지 0~100. 광역 탐지 +50, 걸음 +1, 달리기 +5, 초당 -1
+const WALK_R=75,RUN_R=145; // 발소리 소나 링 반경(시야용)
+const NOISE_MAX=100,NOISE_DECAY=1,NOISE_IDLE_DECAY=5; // 최대 100, 이동 중 초당 1·정지 중 초당 5 감소
+const NOISE_WALK=1,NOISE_RUN=5,NOISE_PING=30,NOISE_STONE=8,NOISE_TOY=12,NOISE_ALARM=8,NOISE_DMG=20;
+
+// ══════════════════════════════════════════════
+// PLAYER MOVE
+// ══════════════════════════════════════════════
+const PSPD=190,PRSPD=300,PR=9;
+const FOV_BASE=62,FOV_BOOST_MAX=85;
+let fovBoost=0;
+let stageVisBonus=0,stageEnemySee=0; // 스테이지별 시야/적 가시 보너스(1단계 쉬움)
+let baseVisR=0;        // 기본 시야 반경 (1단계만 사용, 평소 0 = 벽 안 보임)
+let wideSonarR=360;    // 광역 탐지 반경 = 제일 큰 방의 절반
+let perceiveR=180;     // 플레이어 인지 거리 = 광역 탐지의 절반
+let lights=[];         // 광역 소나가 비추는 빛(시간에 따라 사라짐)
+const STAM_MAX=1.4,STAM_DRAIN=0.55,STAM_REC=0.22,STAM_MIN=0.25;
+let stamina=STAM_MAX,stamLocked=false;
+
+function moveEnt(e,vx,vy,dt){
+  const dx=vx*dt,dy=vy*dt,m=e.r-2;
+  let mv=false;
+  const nx=e.x+dx;
+  if(!isWall(nx+m,e.y)&&!isWall(nx-m,e.y)&&!isWall(nx+m,e.y-m)&&!isWall(nx-m,e.y-m)&&!isWall(nx+m,e.y+m)&&!isWall(nx-m,e.y+m)){e.x=nx;mv=true;}
+  const ny=e.y+dy;
+  if(!isWall(e.x,ny+m)&&!isWall(e.x,ny-m)&&!isWall(e.x-m,ny+m)&&!isWall(e.x+m,ny+m)&&!isWall(e.x-m,ny-m)&&!isWall(e.x+m,ny-m)){e.y=ny;mv=true;}
+  return mv;
+}
+
+// ══════════════════════════════════════════════
+// ENEMY DEFS
+// ══════════════════════════════════════════════
+// type 0=normal  type 1=fast scout  type 2=wide watcher
+// type 0: fast scout — small radius, fast (r=8), chase < player run speed
+// type 1: slow watcher — large radius, slow (r=16), chase well below player run speed
+// PSPD(walk)=190
+// Scout: no sonar, fast (above walk speed), contact=HP-1 then vanish
+// Watcher: sonar only, slow, contact=HP-3 then vanish
+const EDEFS=[
+  {r:8,  pSpd:80, iSpd:140,cSpd:210,sonarT:999,sonarR:0,  sight:150,col:[230,90,20]},  // 0: fast scout (no sonar)
+  {r:16, pSpd:35, iSpd:62, cSpd:145,sonarT:1.8,sonarR:305,sight:120,col:[160,30,210]}, // 1: slow watcher
+];
+const ENEMY_FOV_HALF=Math.PI/12; // 시야가 2배가 되는 정면 콘: 총 30도(±15도)
+let enemyIdCtr=0;
+function mkEnemy(wx,wy,ti){
+  const def=EDEFS[ti%EDEFS.length];
+  return{x:wx,y:wy,r:def.r,ti,def,id:enemyIdCtr++,
+    state:'patrol',wpX:wx,wpY:wy,wpT:0,wBounce:0,face:Math.random()*Math.PI*2,
+    targetX:wx,targetY:wy,invT:0,invCount:0,
+    lostT:0,sonarT:0,revealTimer:0,
+    // pathfinding
+    path:null,pathIdx:0,pathT:0,gCell:-1,
+    // search state
+    searchOX:wx,searchOY:wy,searchWpLeft:0,searchT:0,
+    prevX:wx,prevY:wy,footT:0,footSide:true,
+    speedBonus:0};
+}
+let _floors=null;
+function getFl(){if(!_floors)_floors=getFloors();return _floors;}
+function pickWP(ex,ey,minD,maxD){
+  const fl=getFl();
+  const c=fl.filter(f=>{const d=Math.hypot(f.x-ex,f.y-ey);return d>=minD&&d<=maxD;});
+  const arr=c.length>0?c:fl;return arr[Math.floor(Math.random()*arr.length)];
+}
+// 소리 발생 원점(ox,oy) 주변에서 탐색 웨이포인트 선택
+function pickSearchWP(ox,oy,minD,maxD){
+  const fl=getFl();
+  const c=fl.filter(f=>{const d=Math.hypot(f.x-ox,f.y-oy);return d>=minD&&d<=maxD;});
+  const arr=c.length>0?c:fl.filter(f=>Math.hypot(f.x-ox,f.y-oy)<=maxD*1.5);
+  return (arr.length>0?arr:fl)[Math.floor(Math.random()*(arr.length||fl.length))];
+}
+
+// ── 시야 판정: 적이 바라보는 방향(±15도, 총 30도) 콘 안에서는 시야 2배 ──
+function enemySeesPlayer(e){
+  const dx=player.x-e.x,dy=player.y-e.y,dist=Math.hypot(dx,dy);
+  if(dist<6)return true;
+  let range=e.def.sight;
+  const ang=Math.atan2(dy,dx);
+  let da=Math.abs(((ang-e.face+Math.PI*3)%(Math.PI*2))-Math.PI); // 0..PI 사이 각도 차
+  if(da<=ENEMY_FOV_HALF)range*=2;
+  if(dist>range)return false;
+  // 벽에 가리면 못 봄
+  return castRay(e.x,e.y,ang,range)>=dist-T*0.5;
+}
+
+// ── 길찾기(BFS, 4방향). 시작/목표 월드좌표 → 경유 셀 중심들의 배열 ──
+function buildPath(sx,sy,gx,gy){
+  const sr=Math.floor(sy/T),sc=Math.floor(sx/T);
+  let gr=Math.floor(gy/T),gc=Math.floor(gx/T);
+  if(sr<0||sr>=WROWS||sc<0||sc>=WCOLS)return null;
+  if(!(worldMap[gr]&&worldMap[gr][gc]===0)){
+    // 목표가 벽이면 주변에서 가장 가까운 바닥칸으로 대체
+    let best=null,bd=1e9;
+    for(let r=Math.max(1,gr-3);r<Math.min(WROWS-1,gr+4);r++)for(let c=Math.max(1,gc-3);c<Math.min(WCOLS-1,gc+4);c++){
+      if(worldMap[r][c]!==0)continue;const d=(r-gr)*(r-gr)+(c-gc)*(c-gc);if(d<bd){bd=d;best=[r,c];}
+    }
+    if(!best)return null;gr=best[0];gc=best[1];
+  }
+  const N=WROWS*WCOLS,prev=new Int32Array(N).fill(-1),seen=new Uint8Array(N);
+  const start=sr*WCOLS+sc,goal=gr*WCOLS+gc;
+  if(start===goal)return [];
+  const q=[start];seen[start]=1;let head=0,found=false;
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+  while(head<q.length){
+    const cur=q[head++];if(cur===goal){found=true;break;}
+    const r=(cur/WCOLS)|0,c=cur%WCOLS;
+    for(const d of dirs){const nr=r+d[0],nc=c+d[1];if(nr<0||nr>=WROWS||nc<0||nc>=WCOLS)continue;const ni=nr*WCOLS+nc;if(seen[ni]||worldMap[nr][nc]!==0)continue;seen[ni]=1;prev[ni]=cur;q.push(ni);}
+  }
+  if(!found)return null;
+  const path=[];let cur=goal;
+  while(cur!==-1&&cur!==start){const r=(cur/WCOLS)|0,c=cur%WCOLS;path.push({x:c*T+T/2,y:r*T+T/2});cur=prev[cur];}
+  path.reverse();return path;
+}
+// 경로를 따라 목표(gx,gy)로 한 스텝 이동. 목표까지 직선거리 반환
+function stepTo(e,gx,gy,speed,dt){
+  e.pathT-=dt;
+  const gCell=Math.floor(gy/T)*WCOLS+Math.floor(gx/T);
+  if(!e.path||e.pathT<=0||e.gCell!==gCell){
+    e.path=buildPath(e.x,e.y,gx,gy);e.pathIdx=0;e.pathT=0.4;e.gCell=gCell;
+  }
+  let tx=gx,ty=gy;
+  if(e.path&&e.path.length){
+    while(e.pathIdx<e.path.length&&Math.hypot(e.path[e.pathIdx].x-e.x,e.path[e.pathIdx].y-e.y)<T*0.45)e.pathIdx++;
+    if(e.pathIdx<e.path.length){tx=e.path[e.pathIdx].x;ty=e.path[e.pathIdx].y;}
+  }
+  const dx=tx-e.x,dy=ty-e.y,d=Math.hypot(dx,dy);
+  if(d>1){const mv=moveEnt(e,(dx/d)*speed,(dy/d)*speed,dt);if(!mv)e.pathT=0;/*막히면 재탐색*/}
+  return Math.hypot(gx-e.x,gy-e.y);
+}
+
+// ══════════════════════════════════════════════
+// INPUT
+// ══════════════════════════════════════════════
+const keys={};
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(!gameActive)return;
+  if(e.code==='Space'){e.preventDefault();tryUse();}
+  if(e.code==='Digit1'||e.code==='Numpad1')selectSlot(0);
+  if(e.code==='Digit2'||e.code==='Numpad2')selectSlot(1);
+});
+document.addEventListener('keyup',e=>{keys[e.code]=false;});
+let mX=0,mY=0;
+canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();mX=e.clientX-r.left;mY=e.clientY-r.top;});
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('mousedown',e=>{
+  e.preventDefault();getAC();
+  if(!gameActive)return;
+  if(e.button===0){
+    // 좌클릭: 광역 탐지 (벽 차단). 소나 범위만큼 밝힘
+    const R=wideSonarR;spawnSonar(player.x,player.y,R,'ping',false);
+    sfx.pingR();addNoise(NOISE_PING);pingCount++;
+    fovBoost=Math.min(FOV_BOOST_MAX,fovBoost+FOV_BOOST_MAX*0.9);
+    lights.push({x:player.x,y:player.y,r:R,life:1,maxLife:1.9});
+    sonarHitEnemies(player.x,player.y,R);
+  }
+});
+
+function addNoise(amt){
+  noiseGauge=Math.min(NOISE_MAX,noiseGauge+amt);
+  if(noiseGauge>=NOISE_MAX){
+    // All enemies investigate player
+    for(const e of enemies){e.state='investigate';e.targetX=player.x;e.targetY=player.y;e.invT=0;}
+    noiseGauge=NOISE_MAX*0.72;
+    spawnSonar(player.x,player.y,380,'scan',true);
+  }
+}
+function hasStone(){return inventory.some(i=>i.type==='stone'&&i.count>0);}
+function addStone(){const s=inventory.find(i=>i.type==='stone');if(s)s.count++;else inventory.push({type:'stone',count:1});}
+function consumeStone(){const idx=inventory.findIndex(i=>i.type==='stone');if(idx<0)return;inventory[idx].count--;if(inventory[idx].count<=0){inventory.splice(idx,1);if(activeSlot>=inventory.length)activeSlot=Math.max(0,inventory.length-1);}}
+function selectSlot(i){if(i>=0&&i<inventory.length)activeSlot=i;}
+// 가까이 다가가면 자동으로 줍기
+function autoPickup(){
+  for(const item of items){
+    if(item.picked)continue;
+    if(Math.hypot(player.x-item.x,player.y-item.y)<T*1.15){
+      if(item.type==='stone_item'){item.picked=true;addStone();sfx.pick();showTut('돌을 주웠습니다');}
+      else if(item.type==='key'){item.picked=true;hasKey=true;inventory.push({type:'key'});sfx.pick();updObjs();showTut('열쇠를 획득했습니다!');}
+    }
+  }
+}
+function tryUse(){
+  if(!inventory.length)return;
+  const item=inventory[activeSlot];if(!item)return;
+  if(item.type==='key'){
+    if(Math.hypot(player.x-exitObj.x,player.y-exitObj.y)<T*2.8){
+      exitOpen=true;inventory.splice(activeSlot,1);activeSlot=Math.min(activeSlot,Math.max(0,inventory.length-1));
+      sfx.keyU();spawnSonar(exitObj.x,exitObj.y,320,'exit',true);updObjs();showTut('탈출구가 열렸습니다!');
+    }else showTut('탈출구 근처에서 사용하세요');
+  }else if(item.type==='stone'){if(item.count>0){consumeStone();throwStone(s2wx(mX),s2wy(mY));}}
+}
+function throwStone(tx,ty){
+  const dx=tx-player.x,dy=ty-player.y,dist=Math.hypot(dx,dy)||1;
+  stones.push({x:player.x,y:player.y,vx:(dx/dist)*480,vy:(dy/dist)*480,alpha:1,trail:[],alive:true,dist:0});
+  sfx.stone(Math.max(-1,Math.min(1,(tx-player.x)/(VW/2))));
+}
+function sonarHitEnemies(ox,oy,maxR){
+  for(const e of enemies){
+    const d=Math.hypot(e.x-ox,e.y-oy);if(d>maxR)continue;
+    const ang=Math.atan2(e.y-oy,e.x-ox),rd=castRay(ox,oy,ang,maxR);
+    if(rd<d-T*0.5)continue;
+    e.revealTimer=3; // 음파 적중 → 3초간 상태/발자국 노출(인지 거리 밖이어도)
+    // 음파에 맞으면 순찰 모드로 음파 발생 지역으로 이동
+    if(e.state!=='chase'){
+      e.state='patrol';e.wpX=ox;e.wpY=oy;e.wpT=10;e.path=null;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════
+// INIT GAME
+// ══════════════════════════════════════════════
+function initGame(){
+  _floors=null;
+  const rooms=buildMap();buildWallSegs();buildWallPolys();
+  // 광역 탐지 반경 = 제일 큰 방의 절반
+  let maxDim=0;for(const rm of rooms)maxDim=Math.max(maxDim,Math.max(rm.w,rm.h)*T);
+  wideSonarR=Math.max(220,maxDim*0.5);
+  perceiveR=wideSonarR*0.5; // 인지 거리 = 광역 탐지의 절반
+  const fl=getFloors();_floors=fl;
+  // Player
+  const sp=safePick(fl,T-4);
+  player={x:sp.x,y:sp.y,r:PR,angle:0};updCam(player.x,player.y);
+  // Key
+  const farFl=fl.filter(f=>Math.hypot(f.x-sp.x,f.y-sp.y)>WORLD_W*0.28);
+  const kp=safePick(farFl.length>5?farFl:fl,T-4);
+  // Exit — 열쇠와 충분히 멀리 배치
+  const exitFl=fl.filter(f=>Math.hypot(f.x-kp.x,f.y-kp.y)>WORLD_W*0.34&&Math.hypot(f.x-sp.x,f.y-sp.y)>WORLD_W*0.22);
+  const ep=safePick(exitFl.length>5?exitFl:farFl.length>3?farFl:fl,T-4);
+  exitObj={x:ep.x,y:ep.y,visT:0};
+  // Items
+  items=[{type:'key',x:kp.x,y:kp.y,r:7,picked:false,visT:0}];
+  for(let i=0;i<3;i++){const p=safePick(fl,T-4);items.push({type:'stone_item',x:p.x,y:p.y,r:6,picked:false,visT:0});}
+  // Toys & alarms
+  toyItems=[];for(let i=0;i<4;i++){const p=safePick(fl,T-4);toyItems.push({x:p.x,y:p.y,triggered:false,visT:0});}
+  alarmItems=[];for(let i=0;i<3;i++){const p=safePick(fl,T-4);alarmItems.push({x:p.x,y:p.y,active:false,timer:0,interval:0.72,visT:0});}
+  // Enemies
+  const cfg=STAGE_CFG[curStage];
+  enemies=[];
+  const tFl=fl.filter(f=>Math.hypot(f.x-sp.x,f.y-sp.y)>WORLD_W*0.22);
+  for(let i=0;i<cfg.enemies;i++){
+    const tp=safePick(tFl.length>3?tFl:fl,T-4);
+    const ti=i%EDEFS.length; // 0=fast scout, 1=slow watcher, alternating
+    const e=mkEnemy(tp.x,tp.y,ti);e.speedBonus=cfg.speedBonus;enemies.push(e);
+  }
+  // Reset state
+  inventory=[];activeSlot=0;hasKey=false;exitOpen=false;
+  noiseGauge=0;pingCount=0;playerHP=3;hitCD=0;scrFlash=0;
+  dangerLv=0;alertLv=0;fovBoost=0;stamina=STAM_MAX;stamLocked=false;
+  stageVisBonus=cfg.visBonus||0;stageEnemySee=cfg.enemySee||0;
+  // 1단계만 기본 시야 유지(쉬움). 2·3단계는 광역 소나로만 시야 확보
+  baseVisR=(curStage===1)?(FOV_BASE+stageVisBonus):0;
+  sonarRings=[];stones=[];particles=[];footprints=[];lights=[];
+  isDead=false;
+  updObjs();updHP();showTut('탈출해라 &nbsp;|&nbsp; 좌클릭: 광역 탐지 &nbsp;|&nbsp; Space: 아이템 / 돌');
+}
+
+function updObjs(){
+  const o1=document.getElementById('obj1'),o2=document.getElementById('obj2');
+  o1.textContent=(hasKey?'[x]':'[ ]')+' 열쇠 획득';o1.className=hasKey?'done':'';
+  o2.textContent=(exitOpen?'[x]':'[ ]')+' 탈출구 탈출';o2.className=exitOpen?'done':'';
+}
+function updHP(){
+  const b=document.getElementById('hpBar');b.innerHTML='';
+  for(let i=0;i<3;i++){const s=document.createElement('span');s.style.cssText=`font-size:13px;color:${i<playerHP?'#dd3333':'#331111'};`;s.textContent='♥';b.appendChild(s);}
+}
+let tutTO=null;
+function showTut(msg){const el=document.getElementById('tut');el.innerHTML=msg;el.style.opacity='1';if(tutTO)clearTimeout(tutTO);tutTO=setTimeout(()=>el.style.opacity='0',5000);}
+
+// ══════════════════════════════════════════════
+// UPDATE
+// ══════════════════════════════════════════════
+let lastT=0,walkT=0,walkSide=true;
+
+function update(now){
+  if(!gameActive||isDead)return;
+  const dt=Math.min((now-lastT)/1000,0.05);lastT=now;
+
+  // Timer HUD
+  const el=(now-stgStartTime)/1000;
+  const mm=Math.floor(el/60).toString().padStart(2,'0'),ss=Math.floor(el%60).toString().padStart(2,'0');
+  document.getElementById('timerLbl').textContent=mm+':'+ss;
+
+  // Cooldowns
+  if(hitCD>0)hitCD=Math.max(0,hitCD-dt);
+  if(scrFlash>0)scrFlash=Math.max(0,scrFlash-dt*2.5);
+  fovBoost=Math.max(0,fovBoost-dt*95);
+
+  // ── Movement ──
+  let mx=0,my=0;
+  if(keys['KeyW']||keys['ArrowUp'])my-=1;
+  if(keys['KeyS']||keys['ArrowDown'])my+=1;
+  if(keys['KeyA']||keys['ArrowLeft'])mx-=1;
+  if(keys['KeyD']||keys['ArrowRight'])mx+=1;
+  const mlen=Math.hypot(mx,my),moving=mlen>0;
+  const shift=!!(keys['ShiftLeft']||keys['ShiftRight']);
+  // Stamina
+  if(stamina<=0){stamina=0;stamLocked=true;}
+  if(stamLocked&&stamina>=STAM_MIN)stamLocked=false;
+  const dashing=shift&&moving&&stamina>0&&!stamLocked;
+  if(dashing)stamina=Math.max(0,stamina-STAM_DRAIN*dt);
+  else stamina=Math.min(STAM_MAX,stamina+STAM_REC*dt);
+
+  if(moving){
+    mx/=mlen;my/=mlen;
+    const spd=dashing?PRSPD:PSPD;
+    const preX=player.x,preY=player.y;
+    moveEnt(player,mx*spd,my*spd,dt);
+    player.angle=Math.atan2(my,mx);
+    // Footstep ring
+    walkT+=dt;
+    const wI=dashing?0.22:0.30;
+    if(walkT>=wI){
+      walkT=0;
+      const rR=dashing?RUN_R:WALK_R;
+      spawnSonar(player.x,player.y,rR,'walk',false);
+      addNoise(dashing?NOISE_RUN:NOISE_WALK);
+      if(dashing)sfx.run();else sfx.walk();
+      footprints.push({x:player.x,y:player.y,angle:player.angle,age:0,maxAge:5,isLeft:walkSide,isEnemy:false});
+      walkSide=!walkSide;
+      if(footprints.length>320)footprints.shift();
+      if(Math.random()<0.07)sfx.breath();
+    }
+  }else walkT=0;
+
+  // Noise decay — 정지 시 5/s, 이동 중 1/s
+  noiseGauge=Math.max(0,noiseGauge-(moving?NOISE_DECAY:NOISE_IDLE_DECAY)*dt);
+
+  updCam(player.x,player.y);
+
+  // ── 자동 줍기 ──
+  autoPickup();
+
+  // ── 광역 소나 빛 감쇠 ──
+  for(let i=lights.length-1;i>=0;i--){lights[i].life-=dt/lights[i].maxLife;if(lights[i].life<=0)lights.splice(i,1);}
+
+  // ── Sonar rings + object visT update ──
+  for(let i=sonarRings.length-1;i>=0;i--){
+    const ring=sonarRings[i];ring.radius+=ring.speed*dt;ring.alpha=Math.max(0,(1-ring.radius/ring.maxR)*0.88);
+    // 링이 오브젝트 위를 지나갈 때 visT=1초 설정
+    const checkObj=(obj)=>{
+      if(!obj||obj.picked||obj.triggered)return;
+      const d=Math.hypot(obj.x-ring.x,obj.y-ring.y);
+      if(Math.abs(d-ring.radius)<T*1.5)obj.visT=1.0;
+    };
+    for(const it of items)checkObj(it);
+    for(const toy of toyItems)checkObj(toy);
+    for(const al of alarmItems)checkObj(al);
+    if(exitObj){const d=Math.hypot(exitObj.x-ring.x,exitObj.y-ring.y);if(Math.abs(d-ring.radius)<T*1.5)exitObj.visT=1.0;}
+    if(ring.radius>=ring.maxR)sonarRings.splice(i,1);
+  }
+  // visT 감쇠
+  const decayVis=(obj)=>{if(obj&&obj.visT>0)obj.visT=Math.max(0,obj.visT-dt);};
+  for(const it of items)decayVis(it);
+  for(const toy of toyItems)decayVis(toy);
+  for(const al of alarmItems)decayVis(al);
+  decayVis(exitObj);
+
+  // ── Wall alpha decay ──
+  const decay=moving?0.14:0.09;
+  for(let i=0;i<wAlpha.length;i++)wAlpha[i]=Math.max(0,wAlpha[i]-dt*decay);
+
+  // ── Stones ──
+  for(let i=stones.length-1;i>=0;i--){
+    const s=stones[i];
+    if(!s.alive){s.alpha-=dt*3;if(s.alpha<=0)stones.splice(i,1);continue;}
+    const step=Math.hypot(s.vx,s.vy)*dt;
+    s.x+=s.vx*dt;s.y+=s.vy*dt;s.dist=(s.dist||0)+step;
+    s.trail.push({x:s.x,y:s.y});if(s.trail.length>12)s.trail.shift();
+    if(isWall(s.x,s.y)||s.dist>WORLD_W*0.55){
+      s.alive=false;
+      spawnSonar(s.x,s.y,160,'stone',false);addNoise(NOISE_STONE);
+      spawnParts(s.x,s.y,200,170,80,10);sfx.stone(0);
+      for(const e of enemies){
+        if(Math.hypot(e.x-s.x,e.y-s.y)<360){e.state='investigate';e.targetX=s.x;e.targetY=s.y;e.invT=0;}
+      }
+    }
+  }
+
+  // ── Toys & alarms ──
+  for(const toy of toyItems){
+    if(toy.triggered)continue;
+    if(Math.hypot(player.x-toy.x,player.y-toy.y)<T*1.1){
+      toy.triggered=true;spawnSonar(toy.x,toy.y,170,'alarm',false);addNoise(NOISE_TOY);
+      sfx.toy(Math.max(-1,Math.min(1,(toy.x-player.x)/(VW/2))));
+    }
+  }
+  for(const al of alarmItems){
+    if(!al.active&&Math.hypot(player.x-al.x,player.y-al.y)<T*1.1){
+      al.active=true;al.timer=0;spawnSonar(al.x,al.y,130,'alarm',false);addNoise(NOISE_ALARM);
+      sfx.alarm(Math.max(-1,Math.min(1,(al.x-player.x)/(VW/2))));
+    }
+    if(al.active){al.timer+=dt;if(al.timer>=al.interval){al.timer=0;spawnSonar(al.x,al.y,130,'alarm',false);addNoise(NOISE_ALARM);sfx.alarm(0);}}
+  }
+
+  // ── Enemies ──
+  const fl=getFl();
+  let maxDang=0;
+  for(const e of enemies){
+    e.prevX=e.x;e.prevY=e.y;
+    const dtp=Math.hypot(e.x-player.x,e.y-player.y);
+    const def=e.def;
+    // State transitions — 시야 콘 또는 접촉으로 플레이어 발견 시 추격
+    if(dtp<T*1.9||enemySeesPlayer(e)){e.state='chase';e.lostT=0;e.invCount=0;e.searchWpLeft=0;}
+    if(e.state==='chase'){
+      if(dtp>T*4.5&&!enemySeesPlayer(e)){e.lostT+=dt;if(e.lostT>2.2){e.state='investigate';e.targetX=player.x;e.targetY=player.y;e.invT=0;e.lostT=0;e.path=null;}}
+      else e.lostT=0;
+    }
+    // Enemy sonar
+    if(e.revealTimer>0) e.revealTimer=Math.max(0,e.revealTimer-dt);
+    // Scout has no sonar (sonarR===0)
+    // 와처는 플레이어를 인식(investigate/search/chase)했을 때만 파동 발사
+    if(def.sonarR>0&&e.state!=='patrol'){
+      e.sonarT+=dt;
+      const sI=def.sonarT*(e.state==='chase'?0.5:e.state==='investigate'?0.72:e.state==='search'?0.85:1.0);
+      if(e.sonarT>=sI){
+        e.sonarT=0;
+        spawnSonar(e.x,e.y,def.sonarR+(e.state==='chase'?40:0),'enemy',false);
+        if(Math.hypot(e.x-player.x,e.y-player.y)<def.sonarR*1.5)
+          sfx.enemy(Math.max(-1,Math.min(1,(e.x-player.x)/(VW/2))));
+      }
+    }
+    // Movement (길찾기 BFS 사용 → 벽을 돌아서 이동)
+    if(e.state==='patrol'){
+      e.wpT-=dt;
+      const dWp=Math.hypot(e.wpX-e.x,e.wpY-e.y);
+      if(dWp<T*0.7||e.wpT<=0){const wp=pickWP(e.x,e.y,T*3,T*12);e.wpX=wp.x;e.wpY=wp.y;e.wpT=10+Math.random()*8;e.path=null;}
+      stepTo(e,e.wpX,e.wpY,def.pSpd+e.speedBonus*0.3,dt);
+    }else if(e.state==='investigate'){
+      const d=stepTo(e,e.targetX,e.targetY,def.iSpd+e.speedBonus*0.6,dt);
+      if(d<T*0.8){
+        // 도착 → 주변 탐색으로 전환
+        e.state='search';e.searchOX=e.targetX;e.searchOY=e.targetY;
+        e.searchWpLeft=2+Math.floor(Math.random()*2);e.searchT=0;
+        const swp=pickSearchWP(e.searchOX,e.searchOY,T*1.5,T*4);e.wpX=swp.x;e.wpY=swp.y;e.path=null;
+      }
+    }else if(e.state==='search'){
+      e.searchT+=dt;
+      const d=stepTo(e,e.wpX,e.wpY,def.iSpd*0.8+e.speedBonus*0.5,dt);
+      if(d<T*0.8){
+        e.searchWpLeft--;
+        if(e.searchWpLeft<=0||e.searchT>8){
+          // 탐색 완료 → 순찰
+          e.state='patrol';e.invCount=0;const wp=pickWP(e.x,e.y,T*3,T*10);e.wpX=wp.x;e.wpY=wp.y;e.wpT=10;e.invT=0;e.path=null;
+        }else{
+          // 다음 탐색 지점: 원래 소리 위치 근처
+          const swp=pickSearchWP(e.searchOX,e.searchOY,T*1.5,T*5);e.wpX=swp.x;e.wpY=swp.y;e.path=null;
+        }
+      }
+    }else if(e.state==='chase'){
+      stepTo(e,player.x,player.y,def.cSpd+e.speedBonus,dt);
+    }
+    // 이동 방향으로 시선(face) 갱신
+    if(Math.hypot(e.x-e.prevX,e.y-e.prevY)>0.3)e.face=Math.atan2(e.y-e.prevY,e.x-e.prevX);
+    // Enemy footprints
+    e.footT+=dt;
+    const efI=e.state==='chase'?0.18:0.32;
+    if(Math.hypot(e.x-e.prevX,e.y-e.prevY)>0.3&&e.footT>=efI){
+      e.footT=0;
+      footprints.push({x:e.x,y:e.y,angle:Math.atan2(e.y-e.prevY,e.x-e.prevX),age:0,maxAge:4,isLeft:e.footSide,isEnemy:true,eid:e.id});
+      e.footSide=!e.footSide;if(footprints.length>320)footprints.shift();
+    }
+    maxDang=Math.max(maxDang,Math.max(0,1-dtp/260));
+  }
+  dangerLv+=(maxDang-dangerLv)*0.1;
+  // alertLv: rises when any enemy is in investigate/chase, proportional to proximity
+  let maxAlert=0;
+  for(const e of enemies){
+    if(e.state==='chase'||e.state==='investigate'||e.state==='search'){
+      const prox=Math.max(0,1-Math.hypot(e.x-player.x,e.y-player.y)/520);
+      const base=e.state==='chase'?0.35:e.state==='investigate'?0.18:0.1;
+      const scale=e.state==='chase'?0.65:e.state==='investigate'?0.32:0.2;
+      maxAlert=Math.max(maxAlert,base+prox*scale);
+    }
+  }
+  alertLv+=(maxAlert-alertLv)*0.07;
+  document.getElementById('vig').style.opacity=Math.min(Math.max(dangerLv*0.9,alertLv*0.55),1);
+
+  // ── Enemy sonar hits player ──
+  if(hitCD<=0){
+    for(const ring of sonarRings){
+      if(ring.type!=='enemy')continue;
+      const d=Math.hypot(player.x-ring.x,player.y-ring.y);
+      if(Math.abs(d-ring.radius)<T*0.65){
+        const ang=Math.atan2(player.y-ring.y,player.x-ring.x);
+        const rd=castRay(ring.x,ring.y,ang,ring.maxR);
+        if(rd>=d-T*0.5){doDamage();break;}
+      }
+    }
+    // Direct contact
+    for(let i=enemies.length-1;i>=0;i--){
+      const e=enemies[i];
+      if(Math.hypot(e.x-player.x,e.y-player.y)<e.r+player.r+2){
+        const dmg=e.ti===1?3:1; // watcher=3, scout=1
+        const pc=e.ti===1?[160,30,210]:[230,90,20];
+        spawnParts(e.x,e.y,pc[0],pc[1],pc[2],16);
+        enemies.splice(i,1);
+        doDamage(dmg);
+        break;
+      }
+    }
+  }
+
+  // ── Particles / footprints age ──
+  for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=0.88;p.vy*=0.88;p.alpha-=dt*1.3;p.rad*=0.97;}
+  particles=particles.filter(p=>p.alpha>0);
+  for(let i=footprints.length-1;i>=0;i--){footprints[i].age+=dt;if(footprints[i].age>=footprints[i].maxAge)footprints.splice(i,1);}
+
+  // ── Exit check ──
+  if(exitOpen&&exitObj&&Math.hypot(player.x-exitObj.x,player.y-exitObj.y)<T*1.1){
+    gameActive=false;sfx.esc();setTimeout(showStageClear,400);
+  }
+
+  // ── HUD ──
+  document.getElementById('stgInd').textContent='ST.'+curStage;
+  const nf=document.getElementById('nf');const nFrac=noiseGauge/NOISE_MAX;nf.style.width=(nFrac*100)+'%';
+  const nr=Math.round(40+nFrac*215),ng=Math.round(200-nFrac*180);
+  nf.style.background=`rgb(${nr},${ng},40)`;
+  const sf2=document.getElementById('sf');sf2.style.width=(stamina/STAM_MAX*100)+'%';
+  sf2.style.background=stamLocked?'#ee2222':dashing?'#aaee22':'#2aee6a';
+  updInvHUD();
+}
+
+function doDamage(dmg=1){
+  playerHP-=dmg;hitCD=2.5;scrFlash=1.0;addNoise(NOISE_DMG*dmg);updHP();sfx.dmg();
+  // Nearby enemies investigate
+  for(const e of enemies){if(Math.hypot(e.x-player.x,e.y-player.y)<400&&e.state!=='chase'){e.state='investigate';e.targetX=player.x;e.targetY=player.y;e.invT=0;}}
+  if(playerHP<=0){isDead=true;gameActive=false;sfx.die();setTimeout(showGameOver,850);}
+}
+
+function updInvHUD(){
+  const el=document.getElementById('inv');el.innerHTML='';
+  const slots=Math.max(inventory.length,2);
+  for(let i=0;i<slots;i++){
+    const s=document.createElement('div');s.className='slot'+(i===activeSlot?' active':'');
+    if(i<inventory.length){
+      const it=inventory[i];
+      const icon=document.createElement('span');icon.textContent=it.type==='key'?'🔑':it.type==='stone'?'🪨':'?';s.appendChild(icon);
+      if(it.type==='stone'&&it.count>1){const cnt=document.createElement('span');cnt.className='slot-cnt';cnt.textContent='x'+it.count;s.appendChild(cnt);}
+    }
+    const n=document.createElement('span');n.className='slot-num';n.textContent=i+1;s.appendChild(n);
+    el.appendChild(s);
+  }
+}
+
+// ══════════════════════════════════════════════
+// FOG
+// ══════════════════════════════════════════════
+function buildFog(px,py){
+  fogX.clearRect(0,0,VW,VH);
+  fogX.fillStyle='rgba(0,0,5,0.94)';fogX.fillRect(0,0,VW,VH);
+  fogX.globalCompositeOperation='destination-out';
+  // 기본 시야: 1단계(쉬움)에서만 플레이어 주변을 밝힌다. 평소(2·3단계)에는 벽이 보이지 않음.
+  if(baseVisR>0){
+    const vR=baseVisR+fovBoost,spx=px-cam.x,spy=py-cam.y;
+    const pts=[],FRAYS=90;
+    for(let i=0;i<FRAYS;i++){const ang=(i/FRAYS)*Math.PI*2,d=castRay(px,py,ang,vR);pts.push({x:spx+Math.cos(ang)*d,y:spy+Math.sin(ang)*d});}
+    const grd=fogX.createRadialGradient(spx,spy,0,spx,spy,vR);
+    grd.addColorStop(0,'rgba(255,255,255,1)');grd.addColorStop(0.5,'rgba(255,255,255,0.92)');grd.addColorStop(0.85,'rgba(255,255,255,0.4)');grd.addColorStop(1,'rgba(255,255,255,0)');
+    fogX.fillStyle=grd;fogX.beginPath();fogX.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<pts.length;i++)fogX.lineTo(pts[i].x,pts[i].y);
+    fogX.closePath();fogX.fill();
+  }
+  // 광역 소나 빛: 사용했을 때만 소나 범위(wideSonarR)만큼 밝힌다(벽 차단). 시간에 따라 사라짐.
+  for(const l of lights){
+    const lx=l.x-cam.x,ly=l.y-cam.y;
+    if(lx<-l.r||lx>VW+l.r||ly<-l.r||ly>VH+l.r)continue;
+    const b=Math.min(1,l.life*1.25);
+    const pts=[],LRAYS=84;
+    for(let i=0;i<LRAYS;i++){const ang=(i/LRAYS)*Math.PI*2,d=castRay(l.x,l.y,ang,l.r);pts.push({x:lx+Math.cos(ang)*d,y:ly+Math.sin(ang)*d});}
+    const grd=fogX.createRadialGradient(lx,ly,0,lx,ly,l.r);
+    grd.addColorStop(0,`rgba(255,255,255,${b})`);grd.addColorStop(0.55,`rgba(255,255,255,${b*0.85})`);grd.addColorStop(0.9,`rgba(255,255,255,${b*0.35})`);grd.addColorStop(1,'rgba(255,255,255,0)');
+    fogX.fillStyle=grd;fogX.beginPath();fogX.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<pts.length;i++)fogX.lineTo(pts[i].x,pts[i].y);
+    fogX.closePath();fogX.fill();
+  }
+  fogX.globalCompositeOperation='source-over';
+}
+
+// ══════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════
+function render(){
+  ctx.clearRect(0,0,VW,VH);ctx.fillStyle='#000008';ctx.fillRect(0,0,VW,VH);
+  if(!player)return;
+  const now=performance.now()/1000;
+  const inV=(wx,wy,m)=>wx>=cam.x-(m||50)&&wx<=cam.x+VW+(m||50)&&wy>=cam.y-(m||50)&&wy<=cam.y+VH+(m||50);
+
+  // ── Tiles ──
+  const c0=Math.max(0,Math.floor(cam.x/T)-1),c1=Math.min(WCOLS-1,Math.ceil((cam.x+VW)/T)+1);
+  const r0=Math.max(0,Math.floor(cam.y/T)-1),r1=Math.min(WROWS-1,Math.ceil((cam.y+VH)/T)+1);
+  for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){
+    const tile=worldMap[r][c],tx=c*T-cam.x,ty=r*T-cam.y;
+    if(tile===0){ctx.fillStyle='#28282f';ctx.fillRect(tx,ty,T,T);}
+    else if(tile===1){ctx.fillStyle='#101018';ctx.fillRect(tx,ty,T,T);}
+    else if(tile===2){ctx.fillStyle='#1a1a24';ctx.fillRect(tx,ty,T,T);}
+  }
+
+  // ── Wall outlines ──
+  ctx.lineCap='round';ctx.lineJoin='round';
+  for(const poly of wPolys){
+    let maxA=0;for(const idx of poly.indices)if(wAlpha[idx]>maxA)maxA=wAlpha[idx];
+    if(maxA<0.01)continue;
+    let vis=false;for(const idx of poly.indices){const s=wSegs[idx];if(inV((s.x1+s.x2)/2,(s.y1+s.y2)/2,20)){vis=true;break;}}
+    if(!vis)continue;
+    const pts=poly.pts;
+    ctx.strokeStyle=`rgba(180,220,255,${maxA*0.17})`;ctx.lineWidth=6;
+    ctx.beginPath();ctx.moveTo(w2sx(pts[0].x),w2sy(pts[0].y));for(let k=1;k<pts.length;k++)ctx.lineTo(w2sx(pts[k].x),w2sy(pts[k].y));ctx.stroke();
+    ctx.strokeStyle=`rgba(240,250,255,${maxA*0.92})`;ctx.lineWidth=1.3;
+    ctx.beginPath();ctx.moveTo(w2sx(pts[0].x),w2sy(pts[0].y));for(let k=1;k<pts.length;k++)ctx.lineTo(w2sx(pts[k].x),w2sy(pts[k].y));ctx.stroke();
+  }
+
+  // ── Sonar rings ──
+  for(const ring of sonarRings){
+    if(ring.radius<=0||!inV(ring.x,ring.y,ring.maxR))continue;
+    const cx=w2sx(ring.x),cy=w2sy(ring.y),cr=ring.radius;
+    let rCol,shCol,lw;
+    if(ring.type==='enemy'){rCol=`rgba(255,55,40,${Math.max(ring.alpha,0.28)*1.1})`;shCol='rgba(255,20,20,0.5)';lw=2.0;}
+    else if(ring.type==='alarm'){rCol=`rgba(255,130,90,${ring.alpha*0.88})`;shCol='rgba(255,90,60,0.28)';lw=1.2;}
+    else if(ring.type==='scan'){rCol=`rgba(55,165,255,${ring.alpha*0.8})`;shCol='rgba(35,120,220,0.28)';lw=1.5;}
+    else if(ring.type==='exit'){rCol=`rgba(255,205,50,${ring.alpha})`;shCol='rgba(255,180,30,0.4)';lw=1.5;}
+    else if(ring.type==='stone'){rCol=`rgba(200,170,80,${ring.alpha*0.75})`;shCol='rgba(180,150,60,0.2)';lw=1.1;}
+    else{rCol=`rgba(200,232,255,${ring.alpha})`;shCol='rgba(140,200,255,0.18)';lw=1.1;}
+    ctx.save();ctx.strokeStyle=rCol;ctx.shadowColor=shCol;ctx.shadowBlur=ring.type==='enemy'?10:4;ctx.lineWidth=lw;
+    if(ring.penetrate){ctx.beginPath();ctx.arc(cx,cy,cr,0,Math.PI*2);ctx.stroke();}
+    else{
+      let open=false;ctx.beginPath();
+      for(let ai=0;ai<=RC;ai++){
+        const idx=ai%RC,ang=(idx/RC)*Math.PI*2,hd=ring.hits[idx];
+        if(cr>hd+3){if(open){ctx.stroke();ctx.beginPath();open=false;}continue;}
+        const px=cx+Math.cos(ang)*cr,py=cy+Math.sin(ang)*cr;
+        if(!open){ctx.moveTo(px,py);open=true;}else ctx.lineTo(px,py);
+      }
+      if(open)ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ── Items (visible when sonar passes) ──
+  function getSonarA(wx,wy){
+    let a=0;for(const r of sonarRings){const d=Math.hypot(wx-r.x,wy-r.y);if(Math.abs(d-r.radius)<T*1.5)a=Math.max(a,r.alpha);}
+    return a;
+  }
+  for(const it of items){
+    if(it.picked)continue;
+    const a=Math.max(getSonarA(it.x,it.y),it.visT||0);if(a<0.04)continue;
+    const sx=w2sx(it.x),sy=w2sy(it.y);
+    ctx.save();
+    if(it.type==='key'){ctx.fillStyle=`rgba(255,215,60,${a*0.9})`;ctx.shadowColor=`rgba(255,200,40,${a*0.5})`;ctx.shadowBlur=10*a;}
+    else{ctx.fillStyle=`rgba(160,180,210,${a*0.9})`;ctx.shadowColor=`rgba(140,160,190,${a*0.4})`;ctx.shadowBlur=6*a;}
+    ctx.beginPath();ctx.arc(sx,sy,it.type==='key'?7:5,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+  for(const toy of toyItems){
+    if(toy.triggered)continue;
+    const a=Math.max(getSonarA(toy.x,toy.y),toy.visT||0);if(a<0.04)continue;
+    ctx.save();ctx.fillStyle=`rgba(240,55,45,${a*0.95})`;ctx.shadowColor=`rgba(230,40,30,${a*0.5})`;ctx.shadowBlur=9*a;
+    ctx.beginPath();ctx.arc(w2sx(toy.x),w2sy(toy.y),5,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+  for(const al of alarmItems){
+    const a=Math.max(getSonarA(al.x,al.y),al.visT||0);if(a<0.04)continue;
+    const pulse=al.active?(0.6+0.4*Math.sin(now*8)):1;
+    ctx.save();ctx.fillStyle=`rgba(240,40,30,${a*pulse*0.95})`;ctx.shadowColor=`rgba(230,30,20,${a*0.5})`;ctx.shadowBlur=9*a;
+    ctx.beginPath();ctx.arc(w2sx(al.x),w2sy(al.y),5,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+
+  // ── Exit (golden aura always) ──
+  if(exitObj&&inV(exitObj.x,exitObj.y,100)){
+    const ex=w2sx(exitObj.x),ey=w2sy(exitObj.y),pulse=20+Math.sin(now*2)*8;
+    for(let i=0;i<4;i++){ctx.strokeStyle=`rgba(255,200,40,${0.08-i*0.015})`;ctx.lineWidth=1;ctx.beginPath();ctx.arc(ex,ey,pulse+i*12,0,Math.PI*2);ctx.stroke();}
+    const sa=Math.max(getSonarA(exitObj.x,exitObj.y),exitObj.visT||0);
+    if(sa>0.04){
+      ctx.save();ctx.fillStyle=`rgba(255,205,50,${sa*(exitOpen?1:0.55)})`;ctx.shadowColor='rgba(255,185,30,0.6)';ctx.shadowBlur=16*sa;
+      ctx.beginPath();ctx.arc(ex,ey,8,0,Math.PI*2);ctx.fill();ctx.restore();
+    }
+    const dExit=Math.hypot(player.x-exitObj.x,player.y-exitObj.y);
+    if(dExit<T*5){
+      const fa=Math.max(0.15,1-dExit/(T*5));
+      ctx.fillStyle=`rgba(255,205,50,${fa})`;ctx.font='bold 9px Courier New';ctx.textAlign='center';
+      ctx.fillText(exitOpen?'EXIT':'열쇠가 필요합니다',ex,ey-22);
+    }
+  }
+
+  // ── Footprints ──
+  for(const fp of footprints){
+    const sonarA=getSonarA(fp.x,fp.y);
+    const a=sonarA;if(a<0.04)continue; // 안개 아래: 소나/빛이 닿을 때만. 적 발자국은 안개 위에서 따로 상시 표시
+    const fade=1-fp.age/fp.maxAge,fa=a*fade*(fp.isEnemy?0.82:0.62);if(fa<0.02)continue;
+    const sx=w2sx(fp.x),sy=w2sy(fp.y),perp=fp.angle+Math.PI/2,off=5*(fp.isLeft?-1:1);
+    const cx2=sx+Math.cos(perp)*off,cy2=sy+Math.sin(perp)*off;
+    ctx.save();ctx.translate(cx2,cy2);ctx.rotate(fp.angle+Math.PI/2);
+    ctx.fillStyle=fp.isEnemy?`rgba(255,80,55,${fa})`:`rgba(180,220,255,${fa})`;
+    ctx.beginPath();ctx.ellipse(0,0,2.8,4.5,0,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+
+  // ── Enemies (in FOV or sonar lit) ──
+  for(const e of enemies){
+    if(!inV(e.x,e.y,80))continue;
+    const dtp=Math.hypot(e.x-player.x,e.y-player.y);
+    const inSight=dtp<=FOV_BASE+fovBoost+stageVisBonus+10;
+    const sa=getSonarA(e.x,e.y);
+    const revealed=e.revealTimer>0;
+    // 1단계: 일정 거리 내 적은 항상 은은히 보임
+    const nearSee=stageEnemySee>0&&dtp<=stageEnemySee;
+    const nearA=nearSee?Math.max(0.3,0.85*(1-dtp/stageEnemySee)):0;
+    if(!inSight&&sa<0.04&&!revealed&&!nearSee)continue;
+    const revealA=revealed?Math.min(1,e.revealTimer)*0.85:0;
+    const etx=w2sx(e.x),ety=w2sy(e.y),a=inSight?0.92:Math.max(sa*0.8,revealA,nearA);
+    const isChase=e.state==='chase',col=e.def.col;
+    ctx.save();
+    ctx.shadowColor=`rgba(${col},${a*0.55})`;ctx.shadowBlur=isChase?14:5;
+    ctx.fillStyle=`rgba(${col},${a})`;ctx.beginPath();ctx.arc(etx,ety,e.r,0,Math.PI*2);ctx.fill();
+    const eyeA=Math.atan2(player.y-e.y,player.x-e.x);
+    ctx.fillStyle=`rgba(255,240,200,${a})`;ctx.beginPath();ctx.arc(etx+Math.cos(eyeA)*5,ety+Math.sin(eyeA)*5,2.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=`rgba(20,10,10,1)`;ctx.beginPath();ctx.arc(etx+Math.cos(eyeA)*6.5,ety+Math.sin(eyeA)*6.5,1.2,0,Math.PI*2);ctx.fill();
+    if(isChase){ctx.fillStyle=`rgba(255,50,20,${a})`;ctx.font='bold 9px Courier New';ctx.textAlign='center';ctx.fillText('!',etx,ety-e.r-5);}
+    else if(e.state==='investigate'){ctx.fillStyle=`rgba(255,180,20,${a*0.85})`;ctx.font='8px Courier New';ctx.textAlign='center';ctx.fillText('?',etx,ety-e.r-4);}
+    else if(e.state==='search'){ctx.fillStyle=`rgba(255,220,60,${a*0.8+0.1*Math.sin(performance.now()/200)})`;ctx.font='8px Courier New';ctx.textAlign='center';ctx.fillText('??',etx,ety-e.r-4);}
+    ctx.restore();
+  }
+
+  // ── Particles ──
+  for(const p of particles){if(p.alpha<=0)continue;ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},${p.alpha})`;ctx.beginPath();ctx.arc(w2sx(p.x),w2sy(p.y),p.rad,0,Math.PI*2);ctx.fill();}
+
+  // ── Stones ──
+  for(const s of stones){
+    if(!inV(s.x,s.y,60))continue;
+    if(s.trail.length>1){
+      for(let i=1;i<s.trail.length;i++){
+        const ta=(i/s.trail.length)*0.5*s.alpha;
+        ctx.strokeStyle=`rgba(210,170,80,${ta})`;ctx.lineWidth=1+i/s.trail.length*2;ctx.lineCap='round';
+        ctx.beginPath();ctx.moveTo(w2sx(s.trail[i-1].x),w2sy(s.trail[i-1].y));ctx.lineTo(w2sx(s.trail[i].x),w2sy(s.trail[i].y));ctx.stroke();
+      }
+    }
+    if(s.alive){
+      const sx=w2sx(s.x),sy=w2sy(s.y);
+      ctx.fillStyle=`rgba(0,0,0,${0.28*s.alpha})`;ctx.beginPath();ctx.arc(sx+2,sy+2,5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=`rgba(190,180,160,${s.alpha})`;ctx.beginPath();ctx.arc(sx,sy,5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=`rgba(240,235,220,${s.alpha*0.6})`;ctx.beginPath();ctx.arc(sx-1.5,sy-1.5,2,0,Math.PI*2);ctx.fill();
+    }
+  }
+
+  // ── FOG ──
+  buildFog(player.x,player.y);ctx.drawImage(fogC,0,0);
+
+  // ── 기본 시야: 적의 발자국과 적의 파동은 안개 위에 항상 보인다 ──
+  for(const fp of footprints){
+    if(!fp.isEnemy)continue;
+    const within=Math.hypot(fp.x-player.x,fp.y-player.y)<=perceiveR;
+    const revealed=fp.eid!=null&&enemies.some(en=>en.id===fp.eid&&en.revealTimer>0);
+    if(!within&&!revealed)continue; // 인지 거리 내 또는 음파 적중(3초)일 때만 표시
+    const fade=1-fp.age/fp.maxAge,fa=fade*0.72;if(fa<0.04)continue;
+    if(!inV(fp.x,fp.y,20))continue;
+    const sx=w2sx(fp.x),sy=w2sy(fp.y),perp=fp.angle+Math.PI/2,off=5*(fp.isLeft?-1:1);
+    ctx.save();ctx.translate(sx+Math.cos(perp)*off,sy+Math.sin(perp)*off);ctx.rotate(fp.angle+Math.PI/2);
+    ctx.fillStyle=`rgba(255,80,55,${fa})`;ctx.beginPath();ctx.ellipse(0,0,2.8,4.5,0,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+  for(const ring of sonarRings){
+    if(ring.type!=='enemy'||ring.radius<=0||!inV(ring.x,ring.y,ring.maxR))continue;
+    const cx=w2sx(ring.x),cy=w2sy(ring.y),cr=ring.radius;
+    ctx.save();ctx.strokeStyle=`rgba(255,55,40,${Math.max(ring.alpha,0.3)*1.1})`;ctx.shadowColor='rgba(255,20,20,0.5)';ctx.shadowBlur=10;ctx.lineWidth=2.0;
+    let open=false;ctx.beginPath();
+    for(let ai=0;ai<=RC;ai++){
+      const idx=ai%RC,ang=(idx/RC)*Math.PI*2,hd=ring.hits[idx];
+      if(cr>hd+3){if(open){ctx.stroke();ctx.beginPath();open=false;}continue;}
+      const px=cx+Math.cos(ang)*cr,py=cy+Math.sin(ang)*cr;
+      if(!open){ctx.moveTo(px,py);open=true;}else ctx.lineTo(px,py);
+    }
+    if(open)ctx.stroke();ctx.restore();
+  }
+
+  // ── Player (안개 위에 항상 표시) ──
+  const ppx=w2sx(player.x),ppy=w2sy(player.y);
+  const blinkHide=hitCD>0&&Math.floor(performance.now()/120)%2===0;
+  const isDash=!stamLocked&&stamina>0&&(keys['ShiftLeft']||keys['ShiftRight'])&&(keys['KeyW']||keys['KeyS']||keys['KeyA']||keys['KeyD']||keys['ArrowUp']||keys['ArrowDown']||keys['ArrowLeft']||keys['ArrowRight']);
+  if(!blinkHide){
+    ctx.save();
+    ctx.shadowColor=hitCD>0?'rgba(255,100,100,0.9)':isDash?'rgba(120,255,80,0.8)':'rgba(60,165,255,0.8)';ctx.shadowBlur=12;
+    ctx.strokeStyle=isDash?'rgba(130,255,90,0.7)':'rgba(100,195,255,0.6)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(ppx,ppy,player.r+1,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle=hitCD>0?'rgba(255,150,150,0.9)':isDash?'rgba(140,255,100,0.95)':'rgba(120,200,255,0.95)';
+    ctx.beginPath();ctx.arc(ppx,ppy,player.r-1,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(230,245,255,1)';ctx.beginPath();ctx.arc(ppx,ppy,3,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+  // Direction arrow
+  let dx=0,dy=0;
+  if(keys['KeyW']||keys['ArrowUp'])dy=-1;if(keys['KeyS']||keys['ArrowDown'])dy=1;
+  if(keys['KeyA']||keys['ArrowLeft'])dx=-1;if(keys['KeyD']||keys['ArrowRight'])dx=1;
+  if(dx||dy){const l=Math.hypot(dx,dy);dx/=l;dy/=l;ctx.fillStyle='rgba(160,220,255,0.8)';ctx.beginPath();ctx.moveTo(ppx+dx*20,ppy+dy*20);ctx.lineTo(ppx+(-dy)*5,ppy+dx*5);ctx.lineTo(ppx+dy*5,ppy+(-dx)*5);ctx.closePath();ctx.fill();}
+
+  // ── Exit: 시야와 무관하게 항상 표시 (안개 위) ──
+  if(exitObj&&inV(exitObj.x,exitObj.y,140)){
+    const ex=w2sx(exitObj.x),ey=w2sy(exitObj.y),pulse=16+Math.sin(now*2.5)*7;
+    ctx.save();
+    for(let i=0;i<4;i++){ctx.strokeStyle=`rgba(255,200,40,${0.34-i*0.07})`;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(ex,ey,pulse+i*10,0,Math.PI*2);ctx.stroke();}
+    ctx.shadowColor='rgba(255,190,30,0.9)';ctx.shadowBlur=18;
+    ctx.fillStyle=exitOpen?'rgba(255,215,60,0.98)':'rgba(255,185,40,0.85)';
+    ctx.beginPath();ctx.arc(ex,ey,8,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;ctx.fillStyle='rgba(255,225,90,0.95)';ctx.font='bold 9px Courier New';ctx.textAlign='center';
+    ctx.fillText(exitOpen?'EXIT':'EXIT 🔒',ex,ey-pulse-12);
+    ctx.restore();
+  }
+
+  // ── Post-fog: key label when close ──
+  for(const it of items){
+    if(it.picked||it.type!=='key')continue;
+    const dk=Math.hypot(player.x-it.x,player.y-it.y);
+    if(dk<T*5){
+      const fa=Math.max(0.12,1-dk/(T*5));
+      ctx.save();ctx.fillStyle=`rgba(255,215,60,${fa})`;ctx.shadowColor='rgba(255,200,40,0.5)';ctx.shadowBlur=12;
+      ctx.beginPath();ctx.arc(w2sx(it.x),w2sy(it.y),7,0,Math.PI*2);ctx.fill();
+      if(dk<T*2.5){ctx.font='9px Courier New';ctx.textAlign='center';ctx.fillText('CARD KEY',w2sx(it.x),w2sy(it.y)-16);}
+      ctx.restore();
+    }
+  }
+
+  // ── 방향성 적 근접 표시 + 상태 표시: 인지 거리 내의 적만 ──
+  {
+    const ppx2=w2sx(player.x),ppy2=w2sy(player.y);
+    const arcR=player.r*2.8; // 캐릭터보다 살짝 큰 반경 (화면 픽셀)
+    const HALF_ARC=Math.PI/24; // 15도의 절반 = 7.5도
+    for(const e of enemies){
+      const dx=e.x-player.x,dy=e.y-player.y;
+      const dist=Math.hypot(dx,dy);
+      const revealed=e.revealTimer>0;
+      if(dist>perceiveR&&!revealed)continue; // 인지 거리 밖 + 음파 미적중이면 표시 안 함
+      let intensity=Math.pow(Math.max(0,1-dist/perceiveR),1.0);
+      if(revealed)intensity=Math.max(intensity,0.5); // 음파 적중 시 멀어도 표시
+      const angle=Math.atan2(dy,dx);
+      const col=e.def.col;
+      ctx.save();
+      // 방향성 호
+      ctx.strokeStyle=`rgba(${col},${0.45+intensity*0.5})`;
+      ctx.lineWidth=2.5+intensity*3.5;
+      ctx.lineCap='round';
+      ctx.shadowColor=`rgba(${col},${intensity*0.6})`;
+      ctx.shadowBlur=6*intensity;
+      ctx.beginPath();
+      ctx.arc(ppx2,ppy2,arcR,angle-HALF_ARC,angle+HALF_ARC);
+      ctx.stroke();
+      // 상태 표시: 추격 ! / 그 외(순찰·경계) ?
+      const sym=e.state==='chase'?'!':'?';
+      const lx=ppx2+Math.cos(angle)*(arcR+12),ly=ppy2+Math.sin(angle)*(arcR+12);
+      ctx.shadowBlur=0;ctx.font='bold 12px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle=e.state==='chase'?`rgba(255,60,40,${0.6+intensity*0.4})`:`rgba(255,205,90,${0.5+intensity*0.4})`;
+      ctx.fillText(sym,lx,ly);
+      ctx.restore();
+    }
+  }
+
+  // Alert border: 경계/추격 중인 적이 있으면 화면 가장자리 빨개짐
+  if(alertLv>0.03){
+    const now2=performance.now()/1000;
+    // 추격 상태면 박동, 경계 상태면 은은하게
+    const pulse=alertLv>0.3?(0.72+0.28*Math.sin(now2*5)):1;
+    const thickness=6+alertLv*18;
+    const alpha=alertLv*0.75*pulse;
+    // 외곽 글로우
+    ctx.strokeStyle=`rgba(255,20,0,${alpha*0.35})`;
+    ctx.lineWidth=thickness*2.5;
+    ctx.strokeRect(0,0,VW,VH);
+    // 선명한 테두리
+    ctx.strokeStyle=`rgba(255,40,20,${alpha})`;
+    ctx.lineWidth=thickness;
+    ctx.strokeRect(0,0,VW,VH);
+  }
+  // Screen flash (피격)
+  if(scrFlash>0){ctx.fillStyle=`rgba(220,20,20,${scrFlash*0.28})`;ctx.fillRect(0,0,VW,VH);ctx.strokeStyle=`rgba(255,40,40,${scrFlash*0.85})`;ctx.lineWidth=10;ctx.strokeRect(0,0,VW,VH);}
+
+  // ── Cursor ──
+  const cl=9;ctx.strokeStyle='rgba(100,200,255,0.8)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(mX-cl,mY);ctx.lineTo(mX-3,mY);ctx.moveTo(mX+3,mY);ctx.lineTo(mX+cl,mY);
+  ctx.moveTo(mX,mY-cl);ctx.lineTo(mX,mY-3);ctx.moveTo(mX,mY+3);ctx.lineTo(mX,mY+cl);ctx.stroke();
+  ctx.strokeStyle='rgba(100,200,255,0.32)';ctx.lineWidth=0.5;ctx.beginPath();ctx.arc(mX,mY,4,0,Math.PI*2);ctx.stroke();
+}
+
+// ══════════════════════════════════════════════
+// LOOP
+// ══════════════════════════════════════════════
+function loop(now){update(now);render();requestAnimationFrame(loop);}
+
+// ══════════════════════════════════════════════
+// SCREENS
+// ══════════════════════════════════════════════
+let cdTimer=null;
+function showStageIntro(stage,onDone){
+  const cfg=STAGE_CFG[stage];
+  document.getElementById('stgNum').textContent=cfg.name;
+  document.getElementById('stgTitle').textContent=cfg.title;
+  document.getElementById('stgDesc').textContent=cfg.desc;
+  const cd=document.getElementById('stgCD'),scr=document.getElementById('stgScr');
+  scr.style.display='flex';let count=3;cd.textContent=count;
+  if(cdTimer)clearInterval(cdTimer);
+  cdTimer=setInterval(()=>{count--;if(count>0)cd.textContent=count;else{clearInterval(cdTimer);cdTimer=null;scr.style.display='none';onDone();}},1000);
+}
+function showStageClear(){
+  const cfg=STAGE_CFG[curStage];
+  const el=Math.round((performance.now()-stgStartTime)/1000);
+  const g=pingCount<=cfg.gradeS?'S':pingCount<=cfg.gradeA?'A':pingCount<=cfg.gradeB?'B':'C';
+  const gc={S:'#dddd30',A:'#50cc60',B:'#50aacc',C:'#8888cc'};
+  totalPings+=pingCount;
+  document.getElementById('scGrade').textContent=g;document.getElementById('scGrade').style.color=gc[g];
+  document.getElementById('scInfo').innerHTML=`STAGE ${curStage} 클리어<br>PING: ${pingCount}회 &nbsp; TIME: ${el}s`;
+  document.getElementById('nextBtn').textContent=curStage>=3?'[ FINAL ESCAPE ]':`[ STAGE ${curStage+1} ]`;
+  document.getElementById('scScr').style.display='flex';
+}
+function showGameOver(){
+  const el=Math.round((performance.now()-stgStartTime)/1000);
+  document.getElementById('goStats').innerHTML=`STAGE ${curStage} &nbsp; PING: ${pingCount} &nbsp; TIME: ${el}s`;
+  document.getElementById('goScr').style.display='flex';
+}
+function showFinalClear(){
+  const el=Math.round((performance.now()-startTime)/1000);
+  const g=totalPings<=22?'S':totalPings<=38?'A':totalPings<=55?'B':'C';
+  const gc={S:'#dddd30',A:'#50cc60',B:'#50aacc',C:'#8888cc'};
+  const rk='echoEsc2Rank';let ranks=JSON.parse(localStorage.getItem(rk)||'[]');
+  ranks.push({time:el,pings:totalPings,date:new Date().toLocaleDateString()});
+  ranks.sort((a,b)=>a.time-b.time);ranks=ranks.slice(0,5);
+  localStorage.setItem(rk,JSON.stringify(ranks));
+  document.getElementById('clrGrade').textContent=g;document.getElementById('clrGrade').style.color=gc[g];
+  document.getElementById('clrStats').innerHTML=`3스테이지 완전 클리어!<br>총 PING: ${totalPings} &nbsp; 총 시간: ${el}s`;
+  document.getElementById('clrScr').style.display='flex';
+  updRanks();
+}
+function updRanks(){
+  const ranks=JSON.parse(localStorage.getItem('echoEsc2Rank')||'[]');
+  const el=document.getElementById('rankList');
+  if(!ranks.length){el.textContent='';return;}
+  let h='<div style="margin-bottom:4px;letter-spacing:3px">— BEST TIMES —</div>';
+  ranks.forEach((r,i)=>{h+=`<div>${i===0?'★★★':i===1?'★★':'★'} ${r.time}s  (PING:${r.pings})</div>`;});
+  el.innerHTML=h;
+}
+function resetAll(){
+  ['clrScr','goScr','scScr'].forEach(id=>document.getElementById(id).style.display='none');
+  curStage=1;totalPings=0;_floors=null;
+  initGame();
+  showStageIntro(1,()=>{gameActive=true;startTime=stgStartTime=lastT=performance.now();});
+}
+
+document.getElementById('nextBtn').addEventListener('click',()=>{
+  document.getElementById('scScr').style.display='none';
+  if(curStage>=3){showFinalClear();return;}
+  curStage++;_floors=null;initGame();
+  showStageIntro(curStage,()=>{gameActive=true;stgStartTime=lastT=performance.now();});
+});
+document.getElementById('retryBtn').addEventListener('click',resetAll);
+document.getElementById('replayBtn').addEventListener('click',resetAll);
+
+let loopStarted=false;
+document.getElementById('startBtn').addEventListener('click',()=>{
+  getAC();startDrone();
+  document.getElementById('startScr').style.display='none';
+  updRanks();curStage=1;totalPings=0;_floors=null;initGame();
+  if(!loopStarted){loopStarted=true;lastT=performance.now();requestAnimationFrame(loop);}
+  showStageIntro(1,()=>{gameActive=true;startTime=stgStartTime=lastT=performance.now();});
+});
+</script>
+</body>
+</html>
